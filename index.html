@@ -253,6 +253,7 @@
       ctx: null,
       enabled: true,
     };
+    let uiNeedsRender = true;
 
     wireStaticActions();
     applyOfflineProgress();
@@ -325,11 +326,19 @@
         while (acc >= CONFIG.tickSec) {
           step(CONFIG.tickSec);
           acc -= CONFIG.tickSec;
+          requestRender();
         }
-        render();
+        if (uiNeedsRender) {
+          render();
+          uiNeedsRender = false;
+        }
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
+    }
+
+    function requestRender() {
+      uiNeedsRender = true;
     }
 
     function simulateSeconds(sec) {
@@ -460,6 +469,7 @@
         if (spend(cost)) {
           state.truckCount += 1;
           logAction(`Truck count upgraded to ${state.truckCount}`);
+          requestRender();
         }
       });
 
@@ -469,6 +479,7 @@
         if (spend(cost)) {
           state.truckLevel += 1;
           logAction(`Truck level upgraded to Lv ${state.truckLevel}`);
+          requestRender();
         }
       });
 
@@ -478,6 +489,7 @@
         if (spend(cost)) {
           state.yieldLevel += 1;
           logAction(`Yield tuning upgraded to Lv ${state.yieldLevel}`);
+          requestRender();
         }
       });
     }
@@ -504,6 +516,7 @@
         state.processLevels[processId] = nextLevel;
         const process = CONFIG.processes.find((p) => p.id === processId);
         logAction(`${process?.label || processId} upgraded to Lv ${nextLevel}`);
+        requestRender();
       }
     }
 
@@ -514,6 +527,7 @@
         state.unlockedNodes.push(index);
         state.currentNode = index;
         logAction(`Node unlocked: ${node.label}`);
+        requestRender();
       }
     }
 
@@ -521,6 +535,7 @@
       if (state.unlockedNodes.includes(index)) {
         state.currentNode = index;
         logAction(`Node switched to ${CONFIG.nodes[index].label}`);
+        requestRender();
       }
     }
 
