@@ -14,6 +14,10 @@
       --good: #58d68d;
       --warn: #f5b041;
       --accent: #4fc3f7;
+      --fx: 1;
+      --theme-bg: linear-gradient(180deg, #1a2530 0%, #0f161d 100%);
+      --theme-glow: rgba(79,195,247,.25);
+      --theme-accent: #4fc3f7;
     }
     * { box-sizing: border-box; }
     body {
@@ -21,16 +25,91 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: radial-gradient(circle at top, #151f28 0%, var(--bg) 60%);
       color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 12px;
+      height: 100vh;
+      overflow: hidden;
     }
-    .app {
-      width: min(100%, 460px);
-      display: grid;
-      gap: 10px;
+    .app { height: 100vh; display: grid; grid-template-rows: 50vh 50vh; }
+
+    .factory-view {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid #273644;
+      background: var(--theme-bg);
+      transition: background .45s ease;
     }
+    .factory-lights {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 10% 12%, rgba(255,255,255,.11), transparent 12%),
+        radial-gradient(circle at 34% 10%, rgba(255,255,255,.09), transparent 12%),
+        radial-gradient(circle at 66% 12%, rgba(255,255,255,.10), transparent 12%),
+        radial-gradient(circle at 90% 10%, rgba(255,255,255,.09), transparent 12%);
+      opacity: .7;
+      pointer-events: none;
+    }
+    .factory-upgrade-sweep {
+      position:absolute; inset:0; pointer-events:none; opacity:0;
+      background: linear-gradient(105deg, transparent 20%, var(--theme-glow) 50%, transparent 80%);
+    }
+    .factory-upgrade-sweep.active { animation: sweep .6s ease; }
+
+    .factory-hud {
+      position:absolute; top:8px; left:8px; right:8px;
+      display:flex; justify-content:space-between; gap:8px; z-index:4;
+    }
+    .hud-chip {
+      border:1px solid #3b5368; border-radius:8px; padding:6px 8px; font-size:.72rem;
+      background: rgba(9,13,18,.65); color:#cbe2f5;
+    }
+    .chip-icon { display:inline-block; margin-right:6px; }
+    .chip-icon.pulse { animation: chipPulse .6s ease; }
+
+    .factory-stage {
+      position:absolute; left:0; right:0; bottom:22%; height:54%; z-index:2;
+    }
+    .belt {
+      position:absolute; left:6%; right:6%; bottom:8%; height:34px;
+      border:1px solid #334c63; border-radius:10px;
+      background: repeating-linear-gradient(90deg, #1e2f3e 0 14px, #24394b 14px 28px);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+      overflow: hidden;
+    }
+    .station {
+      position:absolute; bottom:52px; width:80px; height:74px;
+      border:1px solid #3a5268; border-radius:10px;
+      background: linear-gradient(180deg, rgba(32,48,62,.95), rgba(20,31,41,.95));
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset;
+    }
+    .station .icon { font-size:1.05rem; }
+    .station .name { font-size:.68rem; color:#b2cbe0; }
+    .station.bottleneck { animation: stationPulse 1.4s ease-in-out infinite; border-color:var(--warn); }
+    .station.flash { animation: machineFlash .5s ease; }
+    .station.spark::after {
+      content:""; position:absolute; inset:8px;
+      background: radial-gradient(circle, rgba(79,195,247,.5), transparent 70%);
+      animation: spark .3s ease;
+      pointer-events:none;
+    }
+
+    .wafer {
+      position:absolute; bottom:7px; width:12px; height:12px; border-radius:50%;
+      border:1px solid #80a2bb;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.45), #5d7f98 58%, #2d4355 100%);
+      animation: waferMove linear forwards;
+      opacity: .95;
+      pointer-events:none;
+    }
+
+    .settings {
+      position:absolute; right:8px; bottom:8px; z-index:4;
+      display:flex; flex-direction:column; gap:4px;
+      font-size:.68rem; background: rgba(9,13,18,.7);
+      border:1px solid #2f4456; border-radius:8px; padding:6px;
+    }
+    .settings label { display:flex; gap:6px; align-items:center; color:#9db7cc; }
+
+    .dashboard { overflow-y:auto; padding:10px; display:grid; gap:10px; }
     .panel {
       background: linear-gradient(165deg, #151f27, var(--panel));
       border: 1px solid var(--line);
@@ -38,229 +117,111 @@
       box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03);
       padding: 12px;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 1rem;
-      color: var(--accent);
-      letter-spacing: .08em;
+    .header-title { display:flex; justify-content:space-between; align-items:center; }
+    .header-title h1 { margin:0; font-size:1rem; color:var(--accent); letter-spacing:.08em; }
+    .wafer-badge { width:34px; height:34px; border-radius:50%; border:1px solid #5f7386;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.26), transparent 45%), repeating-radial-gradient(circle, rgba(165,199,230,.16) 0 2px, rgba(60,90,115,.08) 2px 4px), radial-gradient(circle at center, #2a3d4d 0%, #1a2733 70%); }
+    .wafer-badge.active { animation: chipPulse 1.2s ease-in-out infinite; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .stat,.dummy,.node-item,.process-item{ background: rgba(7,11,16,.55); border:1px solid #23313d; border-radius:8px; padding:8px; }
+    .label { font-size:.72rem; color:var(--muted); text-transform:uppercase; }
+    .value { font-size:1rem; font-weight:600; margin-top:2px; }
+    .row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+    .controls{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    .process-list,.node-list{ display:grid; gap:7px; }
+    .process-item{ display:grid; gap:7px; }
+    .process-head{ display:flex; justify-content:space-between; }
+    .process-name{ display:flex; align-items:center; gap:6px; font-weight:700; }
+    .process-icon{ width:18px; text-align:center; }
+    .sub{ display:block; font-size:.7rem; color:#9fbed8; margin-top:3px; }
+    .dummy { border-style:dashed; text-align:center; color:#90a6bb; font-size:.82rem; }
+    .node-item{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .node-item.active{ border-color:var(--good); box-shadow: inset 0 0 0 1px rgba(88,214,141,.3); }
+    button{
+      border:1px solid #34516a; background:linear-gradient(180deg,#22384c,#192c3b); color:#d8ebff;
+      border-radius:8px; padding:10px 8px; font-size:.8rem; font-weight:600; min-height:58px;
+      touch-action:manipulation; transition:transform .05s ease, filter .12s ease;
     }
-    .header-top {
-      display:flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
+    button:active,button.pressed{ transform:translateY(1px) scale(.99); filter:brightness(1.08); }
+    button:disabled{ opacity:.45; filter:grayscale(.2); }
+    .warn{ color:var(--warn); }
+    .log{ font-size:.72rem; color:#8fb3ce; margin-top:8px; padding-top:6px; border-top:1px dashed #2b3f52; min-height:1.4em; }
+
+    .floating-yield {
+      position:absolute; left:50%; top:28%; transform: translateX(-50%);
+      color:#7ff0b0; font-size:.75rem; font-weight:700; opacity:0; pointer-events:none;
     }
-    .wafer-visual {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: 1px solid #5f7386;
-      background:
-        radial-gradient(circle at 30% 30%, rgba(255,255,255,.26), transparent 45%),
-        repeating-radial-gradient(circle, rgba(165,199,230,.16) 0 2px, rgba(60,90,115,.08) 2px 4px),
-        radial-gradient(circle at center, #2a3d4d 0%, #1a2733 70%);
-      box-shadow: inset 0 0 10px rgba(121,179,222,.25), 0 0 8px rgba(52,111,156,.2);
-      flex: 0 0 auto;
-      opacity: .8;
-    }
-    .wafer-visual.active {
-      animation: waferPulse 1.25s ease-in-out infinite;
-      opacity: 1;
-    }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-    .stat {
-      background: rgba(7,11,16,.55);
-      border: 1px solid #23313d;
-      border-radius: 8px;
-      padding: 8px;
-    }
-    .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-    .value { font-size: 1rem; font-weight: 600; margin-top: 3px; }
-    .section-title {
-      font-size: .85rem;
-      color: #b8cbe0;
-      margin: 0 0 8px;
-      letter-spacing: .06em;
-    }
-    .row { display:flex; justify-content:space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-    .row.truck-row { align-items: center; }
-    .row .value.small { font-size: .95rem; }
-    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    button {
-      border: 1px solid #34516a;
-      background: linear-gradient(180deg, #22384c, #192c3b);
-      color: #d8ebff;
-      border-radius: 8px;
-      padding: 10px 8px;
-      font-size: .8rem;
-      font-weight: 600;
-      min-height: 64px;
-      touch-action: manipulation;
-      transition: transform .05s ease, filter .12s ease, box-shadow .12s ease;
-      box-shadow: 0 2px 0 rgba(0,0,0,.35);
-    }
-    button:active {
-      transform: translateY(1px) scale(0.99);
-      filter: brightness(1.08);
-    }
-    button.pressed {
-      transform: translateY(1px) scale(0.99);
-      filter: brightness(1.08);
-    }
-    button:disabled {
-      opacity: .45;
-      filter: grayscale(.2);
-    }
-    .sub { display:block; color: #9fbed8; font-size:.7rem; margin-top:4px; font-weight:500; }
-    .bottom { display: grid; gap: 8px; }
-    .node-list, .process-list { display: grid; gap: 7px; }
-    .process-item {
-      border: 1px solid #2d4559;
-      background: rgba(10,15,21,.55);
-      border-radius: 8px;
-      padding: 8px;
-      display: grid;
-      gap: 7px;
-    }
-    .process-item.bottleneck {
-      border-color: var(--warn);
-      box-shadow: inset 0 0 0 1px rgba(245,176,65,.35), 0 0 8px rgba(245,176,65,.2);
-      animation: bottleneckGlow 1.5s ease-in-out infinite;
-    }
-    .process-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-    }
-    .process-name { font-weight: 700; letter-spacing: .03em; display:flex; align-items:center; gap:6px; }
-    .process-icon {
-      width: 18px;
-      height: 18px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .95rem;
-      color: #c4dbef;
-    }
-    .process-icon svg { width: 18px; height: 18px; }
-    .process-meta { font-size: .75rem; color: var(--muted); }
-        .truck-lane {
-      width: 88px;
-      height: 18px;
-      border: 1px solid #2f4558;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(20,33,44,.65), rgba(10,18,24,.65));
-      position: relative;
-      overflow: hidden;
-    }
-    .truck-icon {
-      position: absolute;
-      left: -14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: .85rem;
-      opacity: .75;
-      filter: drop-shadow(0 0 3px rgba(79,195,247,.3));
-    }
-    .truck-icon.moving {
-      animation: truckMove 2s linear infinite;
-      opacity: 1;
-    }
-.node-item {
-      border: 1px solid #2d4559;
-      background: rgba(10,15,21,.55);
-      border-radius: 8px;
-      padding: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-    .node-item.active { border-color: var(--good); box-shadow: inset 0 0 0 1px rgba(88,214,141,.3); }
-    .node-name { font-weight: 600; }
-    .node-meta { font-size: .72rem; color: var(--muted); }
-    .dummy {
-      border: 1px dashed #44596c;
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-      color: #90a6bb;
-      font-size: .82rem;
-      background: rgba(12,18,24,.45);
-    }
-    .good { color: var(--good); }
-    .warn { color: var(--warn); }
-    .footer { text-align:center; color:#75899d; font-size:.7rem; }
-    .log {
-      font-size: .72rem;
-      color: #8fb3ce;
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px dashed #2b3f52;
-      min-height: 1.4em;
-    }
-    @keyframes truckMove {
-      0% { left: -14px; }
-      100% { left: calc(100% - 2px); }
-    }
-    @keyframes bottleneckGlow {
-      0%, 100% { box-shadow: inset 0 0 0 1px rgba(245,176,65,.35), 0 0 6px rgba(245,176,65,.15); }
-      50% { box-shadow: inset 0 0 0 1px rgba(245,176,65,.6), 0 0 14px rgba(245,176,65,.38); }
-    }
-    @keyframes waferPulse {
-      0%, 100% { transform: scale(1); filter: brightness(1); }
-      50% { transform: scale(1.05); filter: brightness(1.2); }
+    .floating-yield.show { animation: floatYield .65s ease; }
+
+    @keyframes waferMove { from { left: 6%; } to { left: 92%; } }
+    @keyframes spark { from { opacity:.8; } to { opacity:0; } }
+    @keyframes stationPulse { 0%,100% { box-shadow:0 0 0 1px rgba(245,176,65,.35) inset, 0 0 6px rgba(245,176,65,.1);} 50% { box-shadow:0 0 0 1px rgba(245,176,65,.65) inset, 0 0 14px rgba(245,176,65,.35);} }
+    @keyframes machineFlash { 0% { box-shadow: 0 0 0 0 rgba(79,195,247,.75);} 100% { box-shadow:0 0 0 16px rgba(79,195,247,0);} }
+    @keyframes chipPulse { 0%,100% { transform:scale(1);} 50% { transform:scale(1.08); filter:brightness(1.25);} }
+    @keyframes sweep { 0%{opacity:0; transform:translateX(-35%);} 35%{opacity:.85;} 100%{opacity:0; transform:translateX(35%);} }
+    @keyframes floatYield { 0%{opacity:0; transform:translate(-50%,10px);} 20%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-18px);} }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation:none !important; transition:none !important; }
     }
   </style>
 </head>
 <body>
   <main class="app">
-    <section class="panel header">
-      <div class="header-top">
-        <h1>FOUNDRY CONTROL / IDLE MVP</h1>
-        <div id="wafer-visual" class="wafer-visual" aria-hidden="true"></div>
+    <section id="factory-view" class="factory-view">
+      <div class="factory-lights"></div>
+      <div id="factory-sweep" class="factory-upgrade-sweep"></div>
+      <div class="factory-hud">
+        <div class="hud-chip">NODE <strong id="factory-node">-</strong></div>
+        <div class="hud-chip"><span id="factory-chip" class="chip-icon">🧩</span>Yield <strong id="factory-yield">0%</strong></div>
       </div>
-      <div class="grid-2">
-        <div class="stat"><div class="label">Node</div><div id="stat-node" class="value">-</div></div>
-        <div class="stat"><div class="label">Funds</div><div id="stat-money" class="value">$0</div></div>
-        <div class="stat"><div class="label">Revenue / s</div><div id="stat-revenue" class="value good">$0</div></div>
-        <div class="stat"><div class="label">Good Wafers / s</div><div id="stat-good" class="value">0</div></div>
+      <div id="floating-yield" class="floating-yield">Yield +0%</div>
+      <div class="factory-stage">
+        <div class="belt" id="belt"></div>
+        <div id="station-litho" class="station" style="left:18%"><div class="icon">🔦</div><div class="name">Litho</div></div>
+        <div id="station-etch" class="station" style="left:44%"><div class="icon">⚡</div><div class="name">Etch</div></div>
+        <div id="station-cmp" class="station" style="left:70%"><div class="icon">💿</div><div class="name">CMP</div></div>
       </div>
-    </section>
-
-    <section class="panel">
-      <h2 class="section-title">MATERIALS LOGISTICS</h2>
-      <div class="row"><span class="label">Stock</span><span id="mat-stock" class="value small">0</span></div>
-      <div class="row"><span class="label">Supply / s</span><span id="mat-supply" class="value small">0</span></div>
-      <div class="row"><span class="label">Status</span><span id="mat-status" class="value small">Stable</span></div>
-      <div class="row truck-row"><span class="label">Inbound Truck</span><div class="truck-lane"><span id="truck-icon" class="truck-icon" aria-hidden="true">🚚</span></div></div>
-      <div class="controls">
-        <button id="btn-truck-count"></button>
-        <button id="btn-truck-level"></button>
+      <div class="settings">
+        <label><input id="toggle-effects" type="checkbox" /> Effects</label>
+        <label><input id="toggle-sfx" type="checkbox" /> SFX</label>
       </div>
     </section>
 
-    <section class="panel">
-      <h2 class="section-title">FAB LINE</h2>
-      <div class="row"><span class="label">BOTTLENECK</span><span id="fab-bottleneck" class="value small warn">-</span></div>
-      <div class="row"><span class="label">Utilization</span><span id="fab-util" class="value small warn">0%</span></div>
-      <div class="row"><span class="label">Fab Rate / s</span><span id="fab-throughput" class="value small">0</span></div>
-      <div class="row"><span class="label">Yield</span><span id="fab-yield" class="value small">0%</span></div>
-      <div id="process-list" class="process-list"></div>
-      <div class="controls">
-        <button id="btn-yield"></button>
-      </div>
-    </section>
+    <section class="dashboard">
+      <section class="panel">
+        <div class="header-title"><h1>FOUNDRY CONTROL / IDLE MVP</h1><div id="wafer-badge" class="wafer-badge"></div></div>
+        <div class="grid-2">
+          <div class="stat"><div class="label">Node</div><div id="stat-node" class="value">-</div></div>
+          <div class="stat"><div class="label">Funds</div><div id="stat-money" class="value">$0</div></div>
+          <div class="stat"><div class="label">Revenue / s</div><div id="stat-revenue" class="value">$0</div></div>
+          <div class="stat"><div class="label">Good Wafers / s</div><div id="stat-good" class="value">0</div></div>
+        </div>
+      </section>
 
-    <section class="panel bottom">
-      <h2 class="section-title">NODE MIGRATION</h2>
-      <div id="node-list" class="node-list"></div>
-      <div class="dummy">[ AD SLOT x2 ] クリーンルーム防塵スーツ / 中古露光装置セール</div>
-      <div class="dummy">[ IAP DUMMY ] +25% Revenue Boost (未実装)</div>
-      <div id="sys-log" class="log">SYSTEM: Ready.</div>
+      <section class="panel">
+        <div class="row"><span class="label">Materials Stock</span><span id="mat-stock" class="value">0</span></div>
+        <div class="row"><span class="label">Supply / s</span><span id="mat-supply" class="value">0</span></div>
+        <div class="row"><span class="label">Status</span><span id="mat-status" class="value">Stable</span></div>
+        <div class="controls"><button id="btn-truck-count"></button><button id="btn-truck-level"></button></div>
+      </section>
+
+      <section class="panel">
+        <div class="row"><span class="label">BOTTLENECK</span><span id="fab-bottleneck" class="value warn">-</span></div>
+        <div class="row"><span class="label">Utilization</span><span id="fab-util" class="value">0%</span></div>
+        <div class="row"><span class="label">Fab Rate / s</span><span id="fab-throughput" class="value">0</span></div>
+        <div class="row"><span class="label">Yield</span><span id="fab-yield" class="value">0%</span></div>
+        <div id="process-list" class="process-list"></div>
+        <div class="controls"><button id="btn-yield"></button></div>
+      </section>
+
+      <section class="panel">
+        <div id="node-list" class="node-list"></div>
+        <div class="dummy">[ AD SLOT x2 ] クリーンルーム防塵スーツ / 中古露光装置セール</div>
+        <div class="dummy">[ IAP DUMMY ] +25% Revenue Boost (未実装)</div>
+        <div id="sys-log" class="log">SYSTEM: Ready.</div>
+      </section>
     </section>
-    <div class="footer">auto-save enabled / offline profit max 8h</div>
   </main>
 
   <script>
@@ -270,461 +231,288 @@
       maxOfflineSec: 8 * 60 * 60,
       moneyStart: 2000,
       materialsStart: 100,
-      logistics: {
-        baseSupplyPerTruck: 1.8,
-        truckLevelGrowth: 1.14,
-        truckCountBaseCost: 120,
-        truckCountCostGrowth: 1.17,
-        truckLevelBaseCost: 210,
-        truckLevelCostGrowth: 1.2,
-      },
-      fab: {
-        baseFabPerSec: 5,
-        throughputGrowth: 1.16,
-        processBaseCost: 320,
-        processCostGrowth: 1.24,
-        processCostFactorById: { litho: 1.0, etch: 1.05, cmp: 1.1 },
-        yieldBaseCost: 440,
-        yieldCostGrowth: 1.27,
-        yieldBonusPerLevel: 0.012,
-      },
+      logistics: { baseSupplyPerTruck: 1.8, truckLevelGrowth: 1.14, truckCountBaseCost: 120, truckCountCostGrowth: 1.17, truckLevelBaseCost: 210, truckLevelCostGrowth: 1.2 },
+      fab: { baseFabPerSec: 5, throughputGrowth: 1.16, processBaseCost: 320, processCostGrowth: 1.24, processCostFactorById: { litho: 1.0, etch: 1.05, cmp: 1.1 }, yieldBaseCost: 440, yieldCostGrowth: 1.27, yieldBonusPerLevel: 0.012 },
       processes: [
-        { id: "litho", label: "Litho", iconType: "svg", nodeDifficulty: [1.0, 0.9, 0.7] },
+        { id: "litho", label: "Litho", iconType: "emoji", icon: "🔦", nodeDifficulty: [1.0, 0.9, 0.7] },
         { id: "etch", label: "Etch", iconType: "emoji", icon: "⚡", nodeDifficulty: [0.97, 0.87, 0.74] },
         { id: "cmp", label: "CMP", iconType: "emoji", icon: "💿", nodeDifficulty: [0.94, 0.84, 0.68] },
       ],
       nodes: [
-        { id: "130nm", label: "0.13um", unlockCost: 0, waferPrice: 70, materialsPerWafer: 0.75, baseYield: 0.9 },
-        { id: "40nm", label: "40nm", unlockCost: 50000, waferPrice: 250, materialsPerWafer: 1.2, baseYield: 0.72 },
-        { id: "7nm", label: "7nm", unlockCost: 2000000, waferPrice: 1400, materialsPerWafer: 1.85, baseYield: 0.52 },
-      ]
+        { id: "130nm", label: "0.13um", unlockCost: 0, waferPrice: 70, materialsPerWafer: 0.75, baseYield: 0.9, themeBg: "linear-gradient(180deg,#1a2530 0%,#0f161d 100%)", themeAccent: "#4fc3f7" },
+        { id: "40nm", label: "40nm", unlockCost: 50000, waferPrice: 250, materialsPerWafer: 1.2, baseYield: 0.72, themeBg: "linear-gradient(180deg,#2a1f33 0%,#111320 100%)", themeAccent: "#b985ff" },
+        { id: "7nm", label: "7nm", unlockCost: 2000000, waferPrice: 1400, materialsPerWafer: 1.85, baseYield: 0.52, themeBg: "linear-gradient(180deg,#102834 0%,#0d171f 100%)", themeAccent: "#46ffd8" },
+      ],
+      factory: { maxWafers: 12, maxParticles: 20 }
     };
-
-    const state = loadState();
 
     const ui = {
-      statNode: document.getElementById("stat-node"),
-      statMoney: document.getElementById("stat-money"),
-      statRevenue: document.getElementById("stat-revenue"),
-      statGood: document.getElementById("stat-good"),
-      matStock: document.getElementById("mat-stock"),
-      matSupply: document.getElementById("mat-supply"),
-      matStatus: document.getElementById("mat-status"),
-      fabBottleneck: document.getElementById("fab-bottleneck"),
-      fabUtil: document.getElementById("fab-util"),
-      fabThroughput: document.getElementById("fab-throughput"),
-      fabYield: document.getElementById("fab-yield"),
-      btnTruckCount: document.getElementById("btn-truck-count"),
-      btnTruckLevel: document.getElementById("btn-truck-level"),
-      btnYield: document.getElementById("btn-yield"),
-      processList: document.getElementById("process-list"),
-      nodeList: document.getElementById("node-list"),
-      sysLog: document.getElementById("sys-log"),
-      waferVisual: document.getElementById("wafer-visual"),
-      truckIcon: document.getElementById("truck-icon"),
+      statNode: document.getElementById("stat-node"), statMoney: document.getElementById("stat-money"), statRevenue: document.getElementById("stat-revenue"), statGood: document.getElementById("stat-good"),
+      matStock: document.getElementById("mat-stock"), matSupply: document.getElementById("mat-supply"), matStatus: document.getElementById("mat-status"),
+      fabBottleneck: document.getElementById("fab-bottleneck"), fabUtil: document.getElementById("fab-util"), fabThroughput: document.getElementById("fab-throughput"), fabYield: document.getElementById("fab-yield"),
+      btnTruckCount: document.getElementById("btn-truck-count"), btnTruckLevel: document.getElementById("btn-truck-level"), btnYield: document.getElementById("btn-yield"), processList: document.getElementById("process-list"),
+      nodeList: document.getElementById("node-list"), sysLog: document.getElementById("sys-log"),
+      factoryView: document.getElementById("factory-view"), factoryNode: document.getElementById("factory-node"), factoryYield: document.getElementById("factory-yield"), factoryChip: document.getElementById("factory-chip"),
+      floatingYield: document.getElementById("floating-yield"), factorySweep: document.getElementById("factory-sweep"), belt: document.getElementById("belt"),
+      waferBadge: document.getElementById("wafer-badge"),
+      station: { litho: document.getElementById("station-litho"), etch: document.getElementById("station-etch"), cmp: document.getElementById("station-cmp") },
+      toggleEffects: document.getElementById("toggle-effects"), toggleSfx: document.getElementById("toggle-sfx"),
     };
 
-    const audio = {
-      ctx: null,
-      enabled: true,
-    };
+    const audio = { ctx: null };
+    const factory = { activeWafers: 0, particles: 0, prevYieldRate: 0, lastRates: null };
     let uiNeedsRender = true;
 
-    wireStaticActions();
+    const state = loadState();
+    bindActions();
     applyOfflineProgress();
     render();
     startLoop();
+    startFactorySpawner();
     setInterval(saveState, 5000);
     window.addEventListener("beforeunload", saveState);
 
+    function defaultState() {
+      const processLevels = {}; for (const p of CONFIG.processes) processLevels[p.id] = 1;
+      return { money: CONFIG.moneyStart, materials: CONFIG.materialsStart, truckCount: 1, truckLevel: 1, processLevels, yieldLevel: 0, currentNode: 0, unlockedNodes: [0], lastSavedAt: Date.now(), settings: { effectsOn: true, sfxOn: true } };
+    }
     function loadState() {
       try {
-        const raw = localStorage.getItem(CONFIG.saveKey);
-        const parsed = raw ? JSON.parse(raw) : null;
-        return normalizeState(parsed || defaultState());
-      } catch {
-        return defaultState();
+        const raw = localStorage.getItem(CONFIG.saveKey); const parsed = raw ? JSON.parse(raw) : null;
+        const base = defaultState();
+        const merged = { ...base, ...(parsed || {}) };
+        merged.processLevels = { ...base.processLevels, ...(parsed?.processLevels || {}) };
+        if (typeof parsed?.throughputLevel === "number") for (const p of CONFIG.processes) if (typeof parsed?.processLevels?.[p.id] !== "number") merged.processLevels[p.id] = parsed.throughputLevel;
+        merged.unlockedNodes = Array.isArray(parsed?.unlockedNodes) && parsed.unlockedNodes.length ? parsed.unlockedNodes : [0];
+        merged.settings = { ...base.settings, ...(parsed?.settings || {}) };
+        return merged;
+      } catch { return defaultState(); }
+    }
+    function saveState(){ state.lastSavedAt = Date.now(); localStorage.setItem(CONFIG.saveKey, JSON.stringify(state)); }
+    function applyOfflineProgress(){ const elapsed = Math.floor((Date.now() - (state.lastSavedAt || Date.now())) / 1000); const off = Math.max(0, Math.min(CONFIG.maxOfflineSec, elapsed)); for(let i=0;i<off;i++) step(1); }
+
+    function bindActions() {
+      wireButtonPressFeedback();
+      ui.toggleEffects.checked = state.settings.effectsOn;
+      ui.toggleSfx.checked = state.settings.sfxOn;
+      applyEffectFlags();
+
+      ui.toggleEffects.addEventListener("change", () => { state.settings.effectsOn = ui.toggleEffects.checked; applyEffectFlags(); requestRender(); saveState(); });
+      ui.toggleSfx.addEventListener("change", () => { state.settings.sfxOn = ui.toggleSfx.checked; saveState(); });
+
+      ui.btnTruckCount.addEventListener("click", () => { const c = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount); if (spend(c)) { state.truckCount += 1; logAction(`Truck count upgraded to ${state.truckCount}`); requestRender(); }});
+      ui.btnTruckLevel.addEventListener("click", () => { const n = state.truckLevel + 1; const c = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, n); if (spend(c)) { state.truckLevel += 1; logAction(`Truck level upgraded to Lv ${state.truckLevel}`); requestRender(); }});
+      ui.btnYield.addEventListener("click", () => { const n = state.yieldLevel + 1; const c = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, n); if (spend(c)) { state.yieldLevel += 1; logAction(`Yield tuning upgraded to Lv ${state.yieldLevel}`); requestRender(); }});
+    }
+
+    function applyEffectFlags() {
+      document.documentElement.style.setProperty("--fx", state.settings.effectsOn ? "1" : "0");
+      if (!state.settings.effectsOn) {
+        ui.factoryView.querySelectorAll(".flash,.spark,.bottleneck").forEach((n)=>n.classList.remove("flash","spark","bottleneck"));
       }
-    }
-
-    function normalizeState(source) {
-      const base = defaultState();
-      const merged = { ...base, ...source };
-      const levels = { ...base.processLevels, ...(source.processLevels || {}) };
-
-      if (typeof source.throughputLevel === "number") {
-        for (const p of CONFIG.processes) {
-          if (typeof source.processLevels?.[p.id] !== "number") levels[p.id] = source.throughputLevel;
-        }
-      }
-
-      merged.processLevels = levels;
-      merged.unlockedNodes = Array.isArray(source.unlockedNodes) && source.unlockedNodes.length ? source.unlockedNodes : [0];
-      return merged;
-    }
-
-    function defaultState() {
-      const processLevels = {};
-      for (const p of CONFIG.processes) processLevels[p.id] = 1;
-      return {
-        money: CONFIG.moneyStart,
-        materials: CONFIG.materialsStart,
-        truckCount: 1,
-        truckLevel: 1,
-        processLevels,
-        yieldLevel: 0,
-        currentNode: 0,
-        unlockedNodes: [0],
-        lastSavedAt: Date.now(),
-      };
-    }
-
-    function saveState() {
-      state.lastSavedAt = Date.now();
-      localStorage.setItem(CONFIG.saveKey, JSON.stringify(state));
-    }
-
-    function applyOfflineProgress() {
-      if (!state.lastSavedAt) return;
-      const elapsedSec = Math.floor((Date.now() - state.lastSavedAt) / 1000);
-      const offlineSec = Math.max(0, Math.min(CONFIG.maxOfflineSec, elapsedSec));
-      if (offlineSec > 0) simulateSeconds(offlineSec);
     }
 
     function startLoop() {
-      let last = performance.now();
-      let acc = 0;
-      function frame(now) {
-        const dt = Math.min(0.25, (now - last) / 1000);
-        last = now;
-        acc += dt;
-        while (acc >= CONFIG.tickSec) {
-          step(CONFIG.tickSec);
-          acc -= CONFIG.tickSec;
-          requestRender();
-        }
-        if (uiNeedsRender) {
-          render();
-          uiNeedsRender = false;
-        }
+      let last = performance.now(), acc = 0;
+      function frame(now){
+        const dt = Math.min(0.25, (now-last)/1000); last = now; acc += dt;
+        while(acc >= CONFIG.tickSec){ step(CONFIG.tickSec); acc -= CONFIG.tickSec; requestRender(); }
+        if (uiNeedsRender) { render(); uiNeedsRender = false; }
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
     }
 
-    function requestRender() {
-      uiNeedsRender = true;
+    function startFactorySpawner() {
+      setInterval(() => {
+        const rates = factory.lastRates || calculateRates();
+        if (!state.settings.effectsOn || factory.activeWafers >= CONFIG.factory.maxWafers) return;
+        const speedFactor = clamp(rates.effectiveWafersPerSec / 8, 0.35, 1.4);
+        const spawnChance = clamp(rates.effectiveWafersPerSec / 10, 0.05, 0.9);
+        if (Math.random() > spawnChance) return;
+        spawnWafer(speedFactor, rates.isMaterialBottleneck);
+      }, 280);
     }
 
-    function simulateSeconds(sec) {
-      for (let i = 0; i < sec; i++) step(1);
-    }
+    function spawnWafer(speedFactor, bottleneck) {
+      factory.activeWafers++;
+      const wafer = document.createElement("div");
+      wafer.className = "wafer";
+      const duration = clamp(4.4 / speedFactor, 1.4, 5.6);
+      wafer.style.animationDuration = `${duration}s`;
+      wafer.style.opacity = bottleneck ? "0.45" : "0.95";
+      ui.belt.appendChild(wafer);
 
-    function step(sec) {
-      const rates = calculateRates();
-      state.materials += (rates.supplyPerSec - rates.materialConsumptionPerSec) * sec;
-      state.materials = Math.max(0, state.materials);
-      state.money += rates.revenuePerSec * sec;
-    }
-
-    function calculateRates() {
-      const node = CONFIG.nodes[state.currentNode];
-      const processRates = CONFIG.processes.map((process) => {
-        const level = state.processLevels[process.id] || 1;
-        const rate = CONFIG.fab.baseFabPerSec * throughputMultiplier(level) * nodeProcessDifficulty(state.currentNode, process.id);
-        return { id: process.id, label: process.label, level, rate };
-      });
-
-      let bottleneck = processRates[0];
-      for (const p of processRates) {
-        if (p.rate < bottleneck.rate) bottleneck = p;
+      const zones = [[0.24,"litho"],[0.5,"etch"],[0.76,"cmp"]];
+      for (const [pct,id] of zones) {
+        setTimeout(() => triggerStationSpark(id), duration * pct * 1000);
       }
 
+      wafer.addEventListener("animationend", () => {
+        wafer.remove();
+        factory.activeWafers = Math.max(0, factory.activeWafers - 1);
+      }, { once: true });
+    }
+
+    function triggerStationSpark(processId) {
+      if (!state.settings.effectsOn || factory.particles >= CONFIG.factory.maxParticles) return;
+      factory.particles++;
+      const station = ui.station[processId];
+      station.classList.add("spark");
+      setTimeout(() => { station.classList.remove("spark"); factory.particles = Math.max(0, factory.particles - 1); }, 320);
+    }
+
+    function step(sec){ const r = calculateRates(); state.materials = Math.max(0, state.materials + (r.supplyPerSec-r.materialConsumptionPerSec)*sec); state.money += r.revenuePerSec * sec; }
+
+    function calculateRates(){
+      const node = CONFIG.nodes[state.currentNode];
+      const processRates = CONFIG.processes.map((p) => ({ id:p.id, label:p.label, rate: CONFIG.fab.baseFabPerSec * throughputMultiplier(state.processLevels[p.id]||1) * nodeProcessDifficulty(state.currentNode, p.id)}));
+      const bottleneck = processRates.reduce((a,b) => b.rate < a.rate ? b : a, processRates[0]);
       const supplyPerSec = state.truckCount * CONFIG.logistics.baseSupplyPerTruck * truckLevelMultiplier(state.truckLevel);
       const fabRate = bottleneck.rate;
-      const requiredSupplyForFull = fabRate * node.materialsPerWafer;
-      const utilization = requiredSupplyForFull <= 0 ? 0 : Math.min(1, supplyPerSec / requiredSupplyForFull);
+      const utilization = Math.min(1, supplyPerSec / Math.max(0.0001, fabRate * node.materialsPerWafer));
       const effectiveWafersPerSec = fabRate * utilization;
       const materialConsumptionPerSec = effectiveWafersPerSec * node.materialsPerWafer;
-      const y = clamp(node.baseYield + yieldBonus(state.yieldLevel), 0.05, 0.98);
-      const goodPerSec = effectiveWafersPerSec * y;
+      const yieldRate = clamp(node.baseYield + yieldBonus(state.yieldLevel), 0.05, 0.98);
+      const goodPerSec = effectiveWafersPerSec * yieldRate;
       const revenuePerSec = goodPerSec * node.waferPrice;
-      const isMaterialBottleneck = supplyPerSec < fabRate;
-
-      return {
-        processRates,
-        bottleneck,
-        fabRate,
-        supplyPerSec,
-        utilization,
-        materialConsumptionPerSec,
-        yieldRate: y,
-        goodPerSec,
-        revenuePerSec,
-        isMaterialBottleneck,
-      };
+      return { processRates, bottleneck, fabRate, supplyPerSec, utilization, effectiveWafersPerSec, materialConsumptionPerSec, yieldRate, goodPerSec, revenuePerSec, isMaterialBottleneck: supplyPerSec < fabRate };
     }
 
-    function truckLevelMultiplier(level) { return Math.pow(CONFIG.logistics.truckLevelGrowth, Math.max(0, level - 1)); }
-    function throughputMultiplier(level) { return Math.pow(CONFIG.fab.throughputGrowth, Math.max(0, level - 1)); }
-    function yieldBonus(level) { return level * CONFIG.fab.yieldBonusPerLevel; }
-    function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-
-    function nodeProcessDifficulty(nodeIndex, processId) {
-      const process = CONFIG.processes.find((p) => p.id === processId);
-      if (!process) return 1;
-      return process.nodeDifficulty[nodeIndex] ?? 1;
-    }
-
-    function upgradeCost(base, growth, currentLevel) {
-      return Math.floor(base * Math.pow(growth, Math.max(0, currentLevel - 1)));
-    }
-
-    function processUpgradeCost(processId, nextLevel) {
-      const factor = CONFIG.fab.processCostFactorById[processId] ?? 1;
-      return Math.floor(upgradeCost(CONFIG.fab.processBaseCost * factor, CONFIG.fab.processCostGrowth, nextLevel));
-    }
-
-    function canAfford(cost) { return state.money >= cost; }
-
-    function spend(cost) {
-      if (!canAfford(cost)) {
-        logAction(`Insufficient funds (${fmtMoney(cost)} needed)`);
-        playSfx("fail");
-        return false;
-      }
-      state.money -= cost;
-      playSfx("ok");
-      return true;
-    }
-
-    function logAction(message) {
-      ui.sysLog.textContent = `SYSTEM: ${message}`;
-    }
-
-    function ensureAudioContext() {
-      if (!audio.enabled) return null;
-      if (!audio.ctx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) {
-          audio.enabled = false;
-          return null;
-        }
-        audio.ctx = new Ctx();
-      }
-      if (audio.ctx.state === "suspended") audio.ctx.resume();
-      return audio.ctx;
-    }
-
-    function playSfx(type) {
-      const ctx = ensureAudioContext();
-      if (!ctx) return;
-
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = type === "fail" ? "square" : "triangle";
-      osc.frequency.value = type === "fail" ? 190 : 740;
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(type === "fail" ? 0.05 : 0.035, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + (type === "fail" ? 0.09 : 0.06));
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + (type === "fail" ? 0.1 : 0.07));
-    }
-
-    function wireStaticActions() {
-      wireButtonPressFeedback();
-
-      ui.btnTruckCount.addEventListener("click", () => {
-        const cost = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount);
-        if (spend(cost)) {
-          state.truckCount += 1;
-          logAction(`Truck count upgraded to ${state.truckCount}`);
-          requestRender();
-        }
-      });
-
-      ui.btnTruckLevel.addEventListener("click", () => {
-        const nextLevel = state.truckLevel + 1;
-        const cost = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, nextLevel);
-        if (spend(cost)) {
-          state.truckLevel += 1;
-          logAction(`Truck level upgraded to Lv ${state.truckLevel}`);
-          requestRender();
-        }
-      });
-
-      ui.btnYield.addEventListener("click", () => {
-        const nextLevel = state.yieldLevel + 1;
-        const cost = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, nextLevel);
-        if (spend(cost)) {
-          state.yieldLevel += 1;
-          logAction(`Yield tuning upgraded to Lv ${state.yieldLevel}`);
-          requestRender();
-        }
-      });
-    }
-
-    function wireButtonPressFeedback() {
-      document.addEventListener("pointerdown", (event) => {
-        const button = event.target.closest("button");
-        if (!button) return;
-        button.classList.add("pressed");
-      });
-      document.addEventListener("pointerup", () => {
-        document.querySelectorAll("button.pressed").forEach((button) => button.classList.remove("pressed"));
-      });
-      document.addEventListener("pointercancel", () => {
-        document.querySelectorAll("button.pressed").forEach((button) => button.classList.remove("pressed"));
-      });
-    }
+    const truckLevelMultiplier=(l)=>Math.pow(CONFIG.logistics.truckLevelGrowth, Math.max(0,l-1));
+    const throughputMultiplier=(l)=>Math.pow(CONFIG.fab.throughputGrowth, Math.max(0,l-1));
+    const yieldBonus=(l)=>l*CONFIG.fab.yieldBonusPerLevel;
+    const nodeProcessDifficulty=(n,pid)=>CONFIG.processes.find((p)=>p.id===pid)?.nodeDifficulty[n] ?? 1;
+    const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+    const upgradeCost=(base,growth,lv)=>Math.floor(base*Math.pow(growth,Math.max(0,lv-1)));
+    const processUpgradeCost=(pid,nextLv)=>Math.floor(upgradeCost(CONFIG.fab.processBaseCost*(CONFIG.fab.processCostFactorById[pid]??1), CONFIG.fab.processCostGrowth, nextLv));
+    const canAfford=(c)=>state.money>=c;
+    function spend(cost){ if(!canAfford(cost)){ logAction(`Insufficient funds (${fmtMoney(cost)} needed)`); playSfx("fail"); return false; } state.money-=cost; playSfx("ok"); return true; }
 
     function upgradeProcess(processId) {
-      const currentLevel = state.processLevels[processId] || 1;
-      const nextLevel = currentLevel + 1;
-      const cost = processUpgradeCost(processId, nextLevel);
+      const next = (state.processLevels[processId] || 1) + 1;
+      const cost = processUpgradeCost(processId, next);
       if (spend(cost)) {
-        state.processLevels[processId] = nextLevel;
-        const process = CONFIG.processes.find((p) => p.id === processId);
-        logAction(`${process?.label || processId} upgraded to Lv ${nextLevel}`);
+        state.processLevels[processId] = next;
+        logAction(`${processId} upgraded to Lv ${next}`);
+        triggerMachineUpgradeFeedback(processId);
         requestRender();
       }
     }
-
-    function unlockNode(index) {
-      const node = CONFIG.nodes[index];
-      if (!node || state.unlockedNodes.includes(index)) return;
-      if (spend(node.unlockCost)) {
-        state.unlockedNodes.push(index);
-        state.currentNode = index;
-        logAction(`Node unlocked: ${node.label}`);
-        requestRender();
-      }
+    function triggerMachineUpgradeFeedback(processId){
+      if (!state.settings.effectsOn) return;
+      const st = ui.station[processId];
+      st.classList.remove("flash");
+      void st.offsetWidth;
+      st.classList.add("flash");
+      setTimeout(()=>st.classList.remove("flash"), 520);
+      playSfx("machine");
     }
-
-    function selectNode(index) {
-      if (state.unlockedNodes.includes(index)) {
-        state.currentNode = index;
-        logAction(`Node switched to ${CONFIG.nodes[index].label}`);
-        requestRender();
-      }
-    }
+    function unlockNode(index){ const n=CONFIG.nodes[index]; if(!n||state.unlockedNodes.includes(index)) return; if(spend(n.unlockCost)){ state.unlockedNodes.push(index); state.currentNode=index; triggerNodeTransition(); logAction(`Node unlocked: ${n.label}`); requestRender(); } }
+    function selectNode(index){ if(state.unlockedNodes.includes(index)){ state.currentNode=index; triggerNodeTransition(); logAction(`Node switched to ${CONFIG.nodes[index].label}`); requestRender(); } }
+    function triggerNodeTransition(){ if(!state.settings.effectsOn) return; ui.factorySweep.classList.remove("active"); void ui.factorySweep.offsetWidth; ui.factorySweep.classList.add("active"); }
 
     function render() {
+      const rates = calculateRates(); factory.lastRates = rates;
       const node = CONFIG.nodes[state.currentNode];
-      const rates = calculateRates();
 
-      ui.statNode.textContent = node.label;
-      ui.statMoney.textContent = fmtMoney(state.money);
-      ui.statRevenue.textContent = fmtMoney(rates.revenuePerSec);
-      ui.statGood.textContent = fmtNum(rates.goodPerSec, 2);
-      ui.matStock.textContent = fmtNum(state.materials, 1);
-      ui.matSupply.textContent = fmtNum(rates.supplyPerSec, 2);
-      ui.waferVisual.classList.toggle("active", rates.revenuePerSec > 0);
-      ui.truckIcon.classList.toggle("moving", rates.supplyPerSec > 0.001);
-      ui.fabBottleneck.textContent = rates.bottleneck.label;
-      ui.fabUtil.textContent = `${(rates.utilization * 100).toFixed(1)}%`;
-      ui.fabThroughput.textContent = fmtNum(rates.fabRate, 2);
-      ui.fabYield.textContent = `${(rates.yieldRate * 100).toFixed(2)}%`;
+      document.documentElement.style.setProperty("--theme-bg", node.themeBg);
+      document.documentElement.style.setProperty("--theme-accent", node.themeAccent);
+      document.documentElement.style.setProperty("--theme-glow", `${hexToRgba(node.themeAccent, .26)}`);
 
-      if (rates.isMaterialBottleneck) {
-        ui.matStatus.textContent = "Material Bottleneck";
-        ui.matStatus.classList.add("warn");
-      } else {
-        ui.matStatus.textContent = "Stable";
-        ui.matStatus.classList.remove("warn");
+      ui.statNode.textContent = node.label; ui.statMoney.textContent = fmtMoney(state.money); ui.statRevenue.textContent = fmtMoney(rates.revenuePerSec); ui.statGood.textContent = fmtNum(rates.goodPerSec,2);
+      ui.matStock.textContent = fmtNum(state.materials,1); ui.matSupply.textContent = fmtNum(rates.supplyPerSec,2);
+      ui.fabBottleneck.textContent = rates.bottleneck.label; ui.fabUtil.textContent = `${(rates.utilization*100).toFixed(1)}%`; ui.fabThroughput.textContent = fmtNum(rates.fabRate,2); ui.fabYield.textContent = `${(rates.yieldRate*100).toFixed(2)}%`;
+      ui.matStatus.textContent = rates.isMaterialBottleneck ? "Material Bottleneck" : "Stable"; ui.matStatus.classList.toggle("warn", rates.isMaterialBottleneck);
+      ui.waferBadge.classList.toggle("active", rates.revenuePerSec > 0.01);
+
+      ui.factoryNode.textContent = node.label;
+      ui.factoryYield.textContent = `${(rates.yieldRate*100).toFixed(2)}%`;
+
+      const prevYield = factory.prevYieldRate;
+      if (rates.yieldRate > prevYield + 0.00001 && state.settings.effectsOn) {
+        ui.factoryChip.classList.remove("pulse"); void ui.factoryChip.offsetWidth; ui.factoryChip.classList.add("pulse");
+        ui.floatingYield.textContent = `Yield +${((rates.yieldRate - prevYield) * 100).toFixed(2)}%`;
+        ui.floatingYield.classList.remove("show"); void ui.floatingYield.offsetWidth; ui.floatingYield.classList.add("show");
       }
+      factory.prevYieldRate = rates.yieldRate;
 
-      const truckCountCost = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount);
-      const truckLvCost = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, state.truckLevel + 1);
-      const yieldCost = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, state.yieldLevel + 1);
+      const tcc = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount);
+      const tlc = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, state.truckLevel + 1);
+      const yc = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, state.yieldLevel + 1);
+      ui.btnTruckCount.innerHTML = `Truck +1 <span class="sub">Count ${state.truckCount}→${state.truckCount+1}<br>Cost: ${fmtMoney(tcc)}</span>`;
+      ui.btnTruckLevel.innerHTML = `Truck Lv UP <span class="sub">Lv ${state.truckLevel}→${state.truckLevel+1}<br>Cost: ${fmtMoney(tlc)}</span>`;
+      ui.btnYield.innerHTML = `Yield Tuning <span class="sub">Lv ${state.yieldLevel}→${state.yieldLevel+1}<br>Cost: ${fmtMoney(yc)}</span>`;
+      ui.btnTruckCount.disabled = !canAfford(tcc); ui.btnTruckLevel.disabled = !canAfford(tlc); ui.btnYield.disabled = !canAfford(yc);
 
-      ui.btnTruckCount.innerHTML = `Truck +1 <span class="sub">Count: ${state.truckCount} → ${state.truckCount + 1}<br>Cost: ${fmtMoney(truckCountCost)}</span>`;
-      ui.btnTruckLevel.innerHTML = `Truck Lv UP <span class="sub">Lv ${state.truckLevel} → ${state.truckLevel + 1}<br>Cost: ${fmtMoney(truckLvCost)}</span>`;
-      ui.btnYield.innerHTML = `Yield Tuning <span class="sub">Lv ${state.yieldLevel} → ${state.yieldLevel + 1}<br>Cost: ${fmtMoney(yieldCost)}</span>`;
-
-      ui.btnTruckCount.disabled = !canAfford(truckCountCost);
-      ui.btnTruckLevel.disabled = !canAfford(truckLvCost);
-      ui.btnYield.disabled = !canAfford(yieldCost);
+      for (const p of CONFIG.processes) {
+        const active = rates.bottleneck.id === p.id && state.settings.effectsOn;
+        ui.station[p.id].classList.toggle("bottleneck", active);
+      }
 
       renderProcessList(rates);
       renderNodeList();
     }
 
-    function renderProcessList(rates) {
+    function renderProcessList(rates){
       ui.processList.innerHTML = "";
-      for (const process of CONFIG.processes) {
-        const pRate = rates.processRates.find((item) => item.id === process.id);
-        const activeBottleneck = pRate && pRate.id === rates.bottleneck.id;
-        const nextLevel = (state.processLevels[process.id] || 1) + 1;
-        const cost = processUpgradeCost(process.id, nextLevel);
-
-        const row = document.createElement("div");
-        row.className = `process-item ${activeBottleneck ? "bottleneck" : ""}`;
-
-        const head = document.createElement("div");
-        head.className = "process-head";
-        head.innerHTML = `<div class="process-name">${processIconMarkup(process)} ${process.label}</div><div class="process-meta">Lv ${(state.processLevels[process.id] || 1)} | Rate ${fmtNum(pRate.rate, 2)}/s</div>`;
-
-        const button = document.createElement("button");
-        button.innerHTML = `${process.label} Throughput UP<span class="sub">Lv ${state.processLevels[process.id] || 1} → ${nextLevel}<br>Cost: ${fmtMoney(cost)}</span>`;
-        button.disabled = !canAfford(cost);
-        button.addEventListener("click", () => upgradeProcess(process.id));
-
-        row.append(head, button);
-        ui.processList.appendChild(row);
+      for (const p of CONFIG.processes) {
+        const pr = rates.processRates.find((x)=>x.id===p.id);
+        const next=(state.processLevels[p.id]||1)+1; const cost=processUpgradeCost(p.id,next);
+        const row=document.createElement("div"); row.className=`process-item ${rates.bottleneck.id===p.id ? "warn" : ""}`;
+        const head=document.createElement("div"); head.className="process-head";
+        head.innerHTML=`<div class="process-name"><span class="process-icon">${p.icon||"⚙️"}</span>${p.label}</div><div>Lv ${state.processLevels[p.id]||1} | ${fmtNum(pr.rate,2)}/s</div>`;
+        const btn=document.createElement("button"); btn.innerHTML=`${p.label} Throughput UP<span class="sub">Cost: ${fmtMoney(cost)}</span>`; btn.disabled=!canAfford(cost);
+        btn.addEventListener("click",()=>upgradeProcess(p.id));
+        row.append(head,btn); ui.processList.appendChild(row);
       }
     }
 
-    function renderNodeList() {
-      ui.nodeList.innerHTML = "";
-      CONFIG.nodes.forEach((n, index) => {
-        const unlocked = state.unlockedNodes.includes(index);
-        const active = index === state.currentNode;
-
-        const row = document.createElement("div");
-        row.className = `node-item ${active ? "active" : ""}`;
-
-        const left = document.createElement("div");
-        left.innerHTML = `<div class="node-name">${n.label}</div><div class="node-meta">Price ${fmtMoney(n.waferPrice)} / Base Yield ${(n.baseYield * 100).toFixed(1)}%</div>`;
-
-        const btn = document.createElement("button");
-        btn.style.minHeight = "52px";
-        btn.style.padding = "6px 10px";
-        if (active) {
-          btn.textContent = "稼働中";
-          btn.disabled = true;
-        } else if (unlocked) {
-          btn.textContent = "切替";
-          btn.addEventListener("click", () => selectNode(index));
-        } else {
-          btn.innerHTML = `Unlock<span class="sub">${fmtMoney(n.unlockCost)}</span>`;
-          btn.disabled = !canAfford(n.unlockCost);
-          btn.addEventListener("click", () => unlockNode(index));
-        }
-
-        row.append(left, btn);
-        ui.nodeList.appendChild(row);
+    function renderNodeList(){
+      ui.nodeList.innerHTML="";
+      CONFIG.nodes.forEach((n,i)=>{
+        const row=document.createElement("div"); row.className=`node-item ${i===state.currentNode ? "active" : ""}`;
+        const left=document.createElement("div"); left.innerHTML=`<div><strong>${n.label}</strong></div><div class="sub">Price ${fmtMoney(n.waferPrice)} / Base Yield ${(n.baseYield*100).toFixed(1)}%</div>`;
+        const btn=document.createElement("button"); btn.style.minHeight="52px";
+        if(i===state.currentNode){ btn.textContent="稼働中"; btn.disabled=true; }
+        else if(state.unlockedNodes.includes(i)){ btn.textContent="切替"; btn.addEventListener("click",()=>selectNode(i)); }
+        else { btn.innerHTML=`Unlock<span class="sub">${fmtMoney(n.unlockCost)}</span>`; btn.disabled=!canAfford(n.unlockCost); btn.addEventListener("click",()=>unlockNode(i)); }
+        row.append(left,btn); ui.nodeList.appendChild(row);
       });
     }
 
-    function processIconMarkup(process) {
-      if (process.iconType === "svg") {
-        return `<span class="process-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 14.5L12 3l8 11.5" stroke="#9bd8ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 14h10" stroke="#9bd8ff" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17.5" r="3.5" fill="#274056" stroke="#9bd8ff" stroke-width="1.2"/></svg></span>`;
-      }
-      return `<span class="process-icon" aria-hidden="true">${process.icon || "⚙️"}</span>`;
+    function logAction(msg){ ui.sysLog.textContent = `SYSTEM: ${msg}`; }
+    function requestRender(){ uiNeedsRender = true; }
+    function wireButtonPressFeedback(){
+      document.addEventListener("pointerdown",(e)=>{ const b=e.target.closest("button"); if(b) b.classList.add("pressed"); });
+      document.addEventListener("pointerup",()=>document.querySelectorAll("button.pressed").forEach((b)=>b.classList.remove("pressed")));
+      document.addEventListener("pointercancel",()=>document.querySelectorAll("button.pressed").forEach((b)=>b.classList.remove("pressed")));
     }
 
-    function fmtNum(n, d = 0) {
-      return Number(n).toLocaleString("ja-JP", { maximumFractionDigits: d, minimumFractionDigits: d });
+    function ensureAudio(){
+      if (!state.settings.sfxOn) return null;
+      if (!audio.ctx) { const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return null; audio.ctx = new Ctx(); }
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      return audio.ctx;
+    }
+    function playSfx(type){
+      const ctx = ensureAudio(); if (!ctx) return;
+      const o = ctx.createOscillator(), g = ctx.createGain(), now = ctx.currentTime;
+      o.type = type === "fail" ? "square" : "triangle";
+      o.frequency.value = type === "machine" ? 920 : (type === "fail" ? 180 : 720);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(type === "machine" ? .04 : .03, now + .015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + (type === "machine" ? .12 : .07));
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + (type === "machine" ? .13 : .08));
     }
 
-    function fmtMoney(n) {
-      return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+    const fmtNum=(n,d=0)=>Number(n).toLocaleString("ja-JP",{maximumFractionDigits:d,minimumFractionDigits:d});
+    const fmtMoney=(n)=>"$"+Number(n).toLocaleString("en-US",{maximumFractionDigits:0});
+    function hexToRgba(hex, alpha){
+      const h = hex.replace("#","");
+      const p = h.length===3 ? h.split("").map((c)=>c+c).join("") : h;
+      const r = parseInt(p.slice(0,2),16), g = parseInt(p.slice(2,4),16), b = parseInt(p.slice(4,6),16);
+      return `rgba(${r},${g},${b},${alpha})`;
     }
   </script>
 </body>
