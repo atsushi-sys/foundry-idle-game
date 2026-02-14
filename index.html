@@ -108,6 +108,8 @@
       border:1px solid #2f4456; border-radius:8px; padding:6px;
     }
     .settings label { display:flex; gap:6px; align-items:center; color:#9db7cc; }
+    .settings .reset-btn { min-height:30px; padding:6px 8px; font-size:.68rem; border-radius:999px; }
+    .debug-line { margin-top:4px; font-size:.62rem; color:#90a7bc; opacity:.9; max-width:220px; }
 
     .dashboard { overflow-y:auto; padding:10px; display:grid; gap:10px; }
     .panel {
@@ -127,9 +129,19 @@
     .label { font-size:.72rem; color:var(--muted); text-transform:uppercase; }
     .value { font-size:1rem; font-weight:600; margin-top:2px; }
     .row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
-    .controls{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    .controls{ display:grid; grid-template-columns:repeat(2,minmax(140px,1fr)); gap:8px; margin-top:10px; }
+    .controls.single { grid-template-columns:repeat(2,minmax(140px,1fr)); }
+    .upgrade-btn { min-height:44px; padding:7px 10px; border-radius:999px; text-align:left; }
+    .upgrade-btn .main { display:block; font-size:.78rem; line-height:1.15; }
+    .upgrade-btn .sub { display:block; font-size:.64rem; line-height:1.05; margin-top:2px; }
     .process-list,.node-list{ display:grid; gap:7px; }
     .process-item{ display:grid; gap:7px; }
+    .process-item.compact { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; }
+    .process-item.compact .process-head { flex:1; align-items:center; margin-right:4px; }
+    .process-item.compact .process-name { font-size:.8rem; }
+    .process-item.compact .process-meta { font-size:.66rem; color:#9ab3c8; }
+    .process-upgrade-btn { min-height:44px; padding:7px 10px; border-radius:999px; min-width:132px; text-align:left; }
+    .process-upgrade-btn .rowline { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.72rem; }
     .process-head{ display:flex; justify-content:space-between; }
     .process-name{ display:flex; align-items:center; gap:6px; font-weight:700; }
     .process-icon{ width:18px; text-align:center; }
@@ -161,6 +173,14 @@
     @keyframes sweep { 0%{opacity:0; transform:translateX(-35%);} 35%{opacity:.85;} 100%{opacity:0; transform:translateX(35%);} }
     @keyframes floatYield { 0%{opacity:0; transform:translate(-50%,10px);} 20%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-18px);} }
 
+    @media (max-width: 360px) {
+      .controls,.controls.single { grid-template-columns:1fr; }
+      .process-item.compact { flex-direction:column; align-items:stretch; }
+      .process-upgrade-btn { width:100%; min-width:0; }
+    }
+    @media (min-width: 900px) {
+      .controls,.controls.single { grid-template-columns:repeat(3,minmax(140px,1fr)); }
+    }
     @media (prefers-reduced-motion: reduce) {
       * { animation:none !important; transition:none !important; }
     }
@@ -185,6 +205,8 @@
       <div class="settings">
         <label><input id="toggle-effects" type="checkbox" /> Effects</label>
         <label><input id="toggle-sfx" type="checkbox" /> SFX</label>
+        <button id="btn-reset-save" class="reset-btn" type="button">Reset Save</button>
+        <div id="debug-line" class="debug-line">tick: - / error: none</div>
       </div>
     </section>
 
@@ -203,7 +225,7 @@
         <div class="row"><span class="label">Materials Stock</span><span id="mat-stock" class="value">0</span></div>
         <div class="row"><span class="label">Supply / s</span><span id="mat-supply" class="value">0</span></div>
         <div class="row"><span class="label">Status</span><span id="mat-status" class="value">Stable</span></div>
-        <div class="controls"><button id="btn-truck-count"></button><button id="btn-truck-level"></button></div>
+        <div class="controls"><button class="upgrade-btn" id="btn-truck-count"></button><button class="upgrade-btn" id="btn-truck-level"></button></div>
       </section>
 
       <section class="panel">
@@ -212,7 +234,7 @@
         <div class="row"><span class="label">Fab Rate / s</span><span id="fab-throughput" class="value">0</span></div>
         <div class="row"><span class="label">Yield</span><span id="fab-yield" class="value">0%</span></div>
         <div id="process-list" class="process-list"></div>
-        <div class="controls"><button id="btn-yield"></button></div>
+        <div class="controls single"><button class="upgrade-btn" id="btn-yield"></button></div>
       </section>
 
       <section class="panel">
@@ -257,20 +279,31 @@
       waferBadge: document.getElementById("wafer-badge"),
       station: { litho: document.getElementById("station-litho"), etch: document.getElementById("station-etch"), cmp: document.getElementById("station-cmp") },
       toggleEffects: document.getElementById("toggle-effects"), toggleSfx: document.getElementById("toggle-sfx"),
+      btnResetSave: document.getElementById("btn-reset-save"), debugLine: document.getElementById("debug-line"),
     };
 
     const audio = { ctx: null };
     const factory = { activeWafers: 0, particles: 0, prevYieldRate: 0, lastRates: null };
     let uiNeedsRender = true;
+    let loopStarted = false;
+    let lastTickAt = 0;
+    let lastError = "none";
 
     const state = loadState();
-    bindActions();
-    applyOfflineProgress();
-    render();
-    startLoop();
-    startFactorySpawner();
-    setInterval(saveState, 5000);
-    window.addEventListener("beforeunload", saveState);
+    document.addEventListener("DOMContentLoaded", initGame, { once: true });
+    if (document.readyState !== "loading") initGame();
+
+    function initGame() {
+      if (loopStarted) return;
+      loopStarted = true;
+      bindActions();
+      applyOfflineProgress();
+      render();
+      startLoop();
+      startFactorySpawner();
+      setInterval(saveState, 5000);
+      window.addEventListener("beforeunload", saveState);
+    }
 
     function defaultState() {
       const processLevels = {}; for (const p of CONFIG.processes) processLevels[p.id] = 1;
@@ -278,6 +311,8 @@
     }
     function loadState() {
       try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("reset") === "1") localStorage.removeItem(CONFIG.saveKey);
         const raw = localStorage.getItem(CONFIG.saveKey); const parsed = raw ? JSON.parse(raw) : null;
         const base = defaultState();
         const merged = { ...base, ...(parsed || {}) };
@@ -285,6 +320,10 @@
         if (typeof parsed?.throughputLevel === "number") for (const p of CONFIG.processes) if (typeof parsed?.processLevels?.[p.id] !== "number") merged.processLevels[p.id] = parsed.throughputLevel;
         merged.unlockedNodes = Array.isArray(parsed?.unlockedNodes) && parsed.unlockedNodes.length ? parsed.unlockedNodes : [0];
         merged.settings = { ...base.settings, ...(parsed?.settings || {}) };
+        if (typeof merged.currentNode !== "number" || merged.currentNode < 0 || merged.currentNode >= CONFIG.nodes.length) merged.currentNode = 0;
+        for (const p of CONFIG.processes) if (typeof merged.processLevels[p.id] !== "number" || merged.processLevels[p.id] < 1) merged.processLevels[p.id] = 1;
+        if (typeof merged.truckCount !== "number" || merged.truckCount < 1) merged.truckCount = 1;
+        if (typeof merged.truckLevel !== "number" || merged.truckLevel < 1) merged.truckLevel = 1;
         return merged;
       } catch { return defaultState(); }
     }
@@ -299,6 +338,11 @@
 
       ui.toggleEffects.addEventListener("change", () => { state.settings.effectsOn = ui.toggleEffects.checked; applyEffectFlags(); requestRender(); saveState(); });
       ui.toggleSfx.addEventListener("change", () => { state.settings.sfxOn = ui.toggleSfx.checked; saveState(); });
+      ui.btnResetSave.addEventListener("click", () => {
+        if (!confirm("Reset local save and restart?")) return;
+        localStorage.removeItem(CONFIG.saveKey);
+        window.location.href = window.location.pathname + "?reset=1";
+      });
 
       ui.btnTruckCount.addEventListener("click", () => { const c = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount); if (spend(c)) { state.truckCount += 1; logAction(`Truck count upgraded to ${state.truckCount}`); requestRender(); }});
       ui.btnTruckLevel.addEventListener("click", () => { const n = state.truckLevel + 1; const c = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, n); if (spend(c)) { state.truckLevel += 1; logAction(`Truck level upgraded to Lv ${state.truckLevel}`); requestRender(); }});
@@ -315,9 +359,14 @@
     function startLoop() {
       let last = performance.now(), acc = 0;
       function frame(now){
-        const dt = Math.min(0.25, (now-last)/1000); last = now; acc += dt;
-        while(acc >= CONFIG.tickSec){ step(CONFIG.tickSec); acc -= CONFIG.tickSec; requestRender(); }
-        if (uiNeedsRender) { render(); uiNeedsRender = false; }
+        try {
+          const dt = Math.min(0.25, (now-last)/1000); last = now; acc += dt;
+          while(acc >= CONFIG.tickSec){ step(CONFIG.tickSec); acc -= CONFIG.tickSec; requestRender(); lastTickAt = Date.now(); }
+          if (uiNeedsRender) { render(); uiNeedsRender = false; }
+        } catch (e) {
+          lastError = e?.message || String(e);
+          requestRender();
+        }
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
@@ -440,9 +489,9 @@
       const tcc = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount);
       const tlc = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, state.truckLevel + 1);
       const yc = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, state.yieldLevel + 1);
-      ui.btnTruckCount.innerHTML = `Truck +1 <span class="sub">Count ${state.truckCount}→${state.truckCount+1}<br>Cost: ${fmtMoney(tcc)}</span>`;
-      ui.btnTruckLevel.innerHTML = `Truck Lv UP <span class="sub">Lv ${state.truckLevel}→${state.truckLevel+1}<br>Cost: ${fmtMoney(tlc)}</span>`;
-      ui.btnYield.innerHTML = `Yield Tuning <span class="sub">Lv ${state.yieldLevel}→${state.yieldLevel+1}<br>Cost: ${fmtMoney(yc)}</span>`;
+      ui.btnTruckCount.innerHTML = `<span class="main">🚚 Truck +1</span><span class="sub">Count ${state.truckCount}→${state.truckCount+1} / ${fmtMoney(tcc)}</span>`;
+      ui.btnTruckLevel.innerHTML = `<span class="main">🛣️ Truck Lv UP</span><span class="sub">Lv ${state.truckLevel}→${state.truckLevel+1} / ${fmtMoney(tlc)}</span>`;
+      ui.btnYield.innerHTML = `<span class="main">🧪 Yield Tuning</span><span class="sub">Lv ${state.yieldLevel}→${state.yieldLevel+1} / ${fmtMoney(yc)}</span>`;
       ui.btnTruckCount.disabled = !canAfford(tcc); ui.btnTruckLevel.disabled = !canAfford(tlc); ui.btnYield.disabled = !canAfford(yc);
 
       for (const p of CONFIG.processes) {
@@ -450,6 +499,7 @@
         ui.station[p.id].classList.toggle("bottleneck", active);
       }
 
+      ui.debugLine.textContent = `tick: ${lastTickAt ? new Date(lastTickAt).toLocaleTimeString() : "-"} / error: ${lastError}`;
       renderProcessList(rates);
       renderNodeList();
     }
@@ -459,10 +509,10 @@
       for (const p of CONFIG.processes) {
         const pr = rates.processRates.find((x)=>x.id===p.id);
         const next=(state.processLevels[p.id]||1)+1; const cost=processUpgradeCost(p.id,next);
-        const row=document.createElement("div"); row.className=`process-item ${rates.bottleneck.id===p.id ? "warn" : ""}`;
+        const row=document.createElement("div"); row.className=`process-item compact ${rates.bottleneck.id===p.id ? "warn" : ""}`;
         const head=document.createElement("div"); head.className="process-head";
-        head.innerHTML=`<div class="process-name"><span class="process-icon">${p.icon||"⚙️"}</span>${p.label}</div><div>Lv ${state.processLevels[p.id]||1} | ${fmtNum(pr.rate,2)}/s</div>`;
-        const btn=document.createElement("button"); btn.innerHTML=`${p.label} Throughput UP<span class="sub">Cost: ${fmtMoney(cost)}</span>`; btn.disabled=!canAfford(cost);
+        head.innerHTML=`<div class="process-name"><span class="process-icon">${p.icon||"⚙️"}</span>${p.label}</div><div class="process-meta">Lv ${state.processLevels[p.id]||1} | ${fmtNum(pr.rate,2)}/s</div>`;
+        const btn=document.createElement("button"); btn.className='process-upgrade-btn'; btn.innerHTML=`<span class="rowline"><span>UP</span><span>${fmtMoney(cost)}</span></span><span class="sub">Lv ${state.processLevels[p.id]||1}→${next}</span>`; btn.disabled=!canAfford(cost);
         btn.addEventListener("click",()=>upgradeProcess(p.id));
         row.append(head,btn); ui.processList.appendChild(row);
       }
