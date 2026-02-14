@@ -72,6 +72,16 @@
       font-weight: 600;
       min-height: 64px;
       touch-action: manipulation;
+      transition: transform .05s ease, filter .12s ease, box-shadow .12s ease;
+      box-shadow: 0 2px 0 rgba(0,0,0,.35);
+    }
+    button:active {
+      transform: translateY(1px) scale(0.99);
+      filter: brightness(1.08);
+    }
+    button.pressed {
+      transform: translateY(1px) scale(0.99);
+      filter: brightness(1.08);
     }
     button:disabled {
       opacity: .45;
@@ -125,6 +135,14 @@
     .good { color: var(--good); }
     .warn { color: var(--warn); }
     .footer { text-align:center; color:#75899d; font-size:.7rem; }
+    .log {
+      font-size: .72rem;
+      color: #8fb3ce;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed #2b3f52;
+      min-height: 1.4em;
+    }
   </style>
 </head>
 <body>
@@ -167,6 +185,7 @@
       <div id="node-list" class="node-list"></div>
       <div class="dummy">[ AD SLOT x2 ] クリーンルーム防塵スーツ / 中古露光装置セール</div>
       <div class="dummy">[ IAP DUMMY ] +25% Revenue Boost (未実装)</div>
+      <div id="sys-log" class="log">SYSTEM: Ready.</div>
     </section>
     <div class="footer">auto-save enabled / offline profit max 8h</div>
   </main>
@@ -227,6 +246,12 @@
       btnYield: document.getElementById("btn-yield"),
       processList: document.getElementById("process-list"),
       nodeList: document.getElementById("node-list"),
+      sysLog: document.getElementById("sys-log"),
+    };
+
+    const audio = {
+      ctx: null,
+      enabled: true,
     };
 
     wireStaticActions();
@@ -379,27 +404,95 @@
     function canAfford(cost) { return state.money >= cost; }
 
     function spend(cost) {
-      if (!canAfford(cost)) return false;
+      if (!canAfford(cost)) {
+        logAction(`Insufficient funds (${fmtMoney(cost)} needed)`);
+        playSfx("fail");
+        return false;
+      }
       state.money -= cost;
+      playSfx("ok");
       return true;
     }
 
+    function logAction(message) {
+      ui.sysLog.textContent = `SYSTEM: ${message}`;
+    }
+
+    function ensureAudioContext() {
+      if (!audio.enabled) return null;
+      if (!audio.ctx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) {
+          audio.enabled = false;
+          return null;
+        }
+        audio.ctx = new Ctx();
+      }
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      return audio.ctx;
+    }
+
+    function playSfx(type) {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = type === "fail" ? "square" : "triangle";
+      osc.frequency.value = type === "fail" ? 190 : 740;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(type === "fail" ? 0.05 : 0.035, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (type === "fail" ? 0.09 : 0.06));
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + (type === "fail" ? 0.1 : 0.07));
+    }
+
     function wireStaticActions() {
+      wireButtonPressFeedback();
+
       ui.btnTruckCount.addEventListener("click", () => {
         const cost = upgradeCost(CONFIG.logistics.truckCountBaseCost, CONFIG.logistics.truckCountCostGrowth, state.truckCount);
-        if (spend(cost)) state.truckCount += 1;
+        if (spend(cost)) {
+          state.truckCount += 1;
+          logAction(`Truck count upgraded to ${state.truckCount}`);
+        }
       });
 
       ui.btnTruckLevel.addEventListener("click", () => {
         const nextLevel = state.truckLevel + 1;
         const cost = upgradeCost(CONFIG.logistics.truckLevelBaseCost, CONFIG.logistics.truckLevelCostGrowth, nextLevel);
-        if (spend(cost)) state.truckLevel += 1;
+        if (spend(cost)) {
+          state.truckLevel += 1;
+          logAction(`Truck level upgraded to Lv ${state.truckLevel}`);
+        }
       });
 
       ui.btnYield.addEventListener("click", () => {
         const nextLevel = state.yieldLevel + 1;
         const cost = upgradeCost(CONFIG.fab.yieldBaseCost, CONFIG.fab.yieldCostGrowth, nextLevel);
-        if (spend(cost)) state.yieldLevel += 1;
+        if (spend(cost)) {
+          state.yieldLevel += 1;
+          logAction(`Yield tuning upgraded to Lv ${state.yieldLevel}`);
+        }
+      });
+    }
+
+    function wireButtonPressFeedback() {
+      document.addEventListener("pointerdown", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        button.classList.add("pressed");
+      });
+      document.addEventListener("pointerup", () => {
+        document.querySelectorAll("button.pressed").forEach((button) => button.classList.remove("pressed"));
+      });
+      document.addEventListener("pointercancel", () => {
+        document.querySelectorAll("button.pressed").forEach((button) => button.classList.remove("pressed"));
       });
     }
 
@@ -407,7 +500,11 @@
       const currentLevel = state.processLevels[processId] || 1;
       const nextLevel = currentLevel + 1;
       const cost = processUpgradeCost(processId, nextLevel);
-      if (spend(cost)) state.processLevels[processId] = nextLevel;
+      if (spend(cost)) {
+        state.processLevels[processId] = nextLevel;
+        const process = CONFIG.processes.find((p) => p.id === processId);
+        logAction(`${process?.label || processId} upgraded to Lv ${nextLevel}`);
+      }
     }
 
     function unlockNode(index) {
@@ -416,11 +513,15 @@
       if (spend(node.unlockCost)) {
         state.unlockedNodes.push(index);
         state.currentNode = index;
+        logAction(`Node unlocked: ${node.label}`);
       }
     }
 
     function selectNode(index) {
-      if (state.unlockedNodes.includes(index)) state.currentNode = index;
+      if (state.unlockedNodes.includes(index)) {
+        state.currentNode = index;
+        logAction(`Node switched to ${CONFIG.nodes[index].label}`);
+      }
     }
 
     function render() {
