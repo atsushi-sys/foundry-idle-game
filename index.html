@@ -65,24 +65,49 @@
     .chip-icon.pulse { animation: chipPulse .6s ease; }
 
     .factory-stage {
-      position:absolute; left:0; right:0; bottom:22%; height:54%; z-index:2;
+      position:absolute; left:0; right:0; bottom:16%; height:62%; z-index:2;
     }
+    .intake {
+      position:absolute; left:4%; bottom:54px; width:84px; z-index:3;
+      border:1px solid #395268; border-radius:10px; padding:6px;
+      background: linear-gradient(180deg, rgba(34,50,64,.9), rgba(20,30,39,.95));
+    }
+    .intake.shortage { border-color: var(--warn); box-shadow: 0 0 10px rgba(245,176,65,.35); }
+    .intake-head { font-size:.62rem; color:#a8c1d7; display:flex; align-items:center; gap:4px; }
+    .stock-tank { margin-top:5px; height:34px; border:1px solid #395166; border-radius:6px; position:relative; overflow:hidden; background:#12202b; }
+    .stock-fill { position:absolute; left:0; right:0; bottom:0; height:18%; background:linear-gradient(180deg,#4fc3f7,#2b8ec0); transition:height .25s ease; }
+    .stock-meta { margin-top:4px; font-size:.58rem; color:#9ec3dc; }
+    .crate { position:absolute; width:8px; height:8px; border-radius:2px; background:#d6e6f4; border:1px solid #6f90a6; }
+    .crate.in { left:-8px; bottom:10px; animation:crateIn .5s ease forwards; }
+    .crate.out { left:20px; bottom:14px; animation:crateOut .45s ease forwards; }
+
     .belt {
-      position:absolute; left:6%; right:6%; bottom:8%; height:34px;
+      position:absolute; left:14%; right:6%; bottom:8%; height:34px;
       border:1px solid #334c63; border-radius:10px;
       background: repeating-linear-gradient(90deg, #1e2f3e 0 14px, #24394b 14px 28px);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
       overflow: hidden;
     }
     .station {
-      position:absolute; bottom:52px; width:80px; height:74px;
+      position:absolute; bottom:52px; width:96px; min-height:92px;
       border:1px solid #3a5268; border-radius:10px;
       background: linear-gradient(180deg, rgba(32,48,62,.95), rgba(20,31,41,.95));
-      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+      padding:6px;
       box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset;
     }
-    .station .icon { font-size:1.05rem; }
-    .station .name { font-size:.68rem; color:#b2cbe0; }
+    .station .top { display:flex; align-items:center; justify-content:space-between; }
+    .station .icon { font-size:.95rem; }
+    .station .name { font-size:.64rem; color:#b2cbe0; }
+    .station .metrics { margin-top:3px; font-size:.54rem; color:#9dc0d9; line-height:1.2; }
+    .station .flow { margin-top:4px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; align-items:center; }
+    .slot { min-height:16px; border:1px solid #40576b; border-radius:4px; display:flex; gap:1px; align-items:center; justify-content:center; padding:1px; position:relative; overflow:hidden; }
+    .slot.proc { background: rgba(64,86,104,.25); }
+    .slot.proc.processing::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); animation:procSweep .45s linear; }
+    .queue-dot, .out-dot, .wafer-mini { width:5px; height:5px; border-radius:50%; border:1px solid #87a7bf; background:#4f6c81; }
+    .wafer-mini { width:8px; height:8px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+    .wafer-mini.step-in { animation:miniIn .24s ease forwards; }
+    .wafer-mini.step-out { animation:miniOut .24s ease forwards; }
+
     .station.bottleneck { animation: stationPulse 1.4s ease-in-out infinite; border-color:var(--warn); }
     .station.flash { animation: machineFlash .5s ease; }
     .station.spark::after {
@@ -91,6 +116,8 @@
       animation: spark .3s ease;
       pointer-events:none;
     }
+    .station.fx-litho .slot.proc.processing::before { content:''; position:absolute; inset:0; background:linear-gradient(120deg, transparent 30%, rgba(120,205,255,.35) 50%, transparent 70%); animation:lithoScan .45s linear; }
+    .station.fx-cmp .slot.proc.processing { box-shadow: inset 0 0 8px rgba(220,255,255,.25); }
 
     .wafer {
       position:absolute; bottom:7px; width:12px; height:12px; border-radius:50%;
@@ -166,6 +193,12 @@
     .floating-yield.show { animation: floatYield .65s ease; }
 
     @keyframes waferMove { from { left: 6%; } to { left: 92%; } }
+    @keyframes crateIn { 0% { transform:translate(-8px,0); opacity:0; } 100% { transform:translate(22px,0); opacity:1; } }
+    @keyframes crateOut { 0% { transform:translate(0,0); opacity:1; } 100% { transform:translate(-14px,-6px); opacity:0; } }
+    @keyframes miniIn { 0% { transform:translate(-150%,-50%); opacity:0; } 100% { transform:translate(-50%,-50%); opacity:1; } }
+    @keyframes miniOut { 0% { transform:translate(-50%,-50%); opacity:1; } 100% { transform:translate(90%,-50%); opacity:0; } }
+    @keyframes procSweep { 0% { opacity:0; } 30% { opacity:1; } 100% { opacity:0; } }
+    @keyframes lithoScan { 0% { transform:translateX(-80%);} 100% { transform:translateX(80%);} }
     @keyframes spark { from { opacity:.8; } to { opacity:0; } }
     @keyframes stationPulse { 0%,100% { box-shadow:0 0 0 1px rgba(245,176,65,.35) inset, 0 0 6px rgba(245,176,65,.1);} 50% { box-shadow:0 0 0 1px rgba(245,176,65,.65) inset, 0 0 14px rgba(245,176,65,.35);} }
     @keyframes machineFlash { 0% { box-shadow: 0 0 0 0 rgba(79,195,247,.75);} 100% { box-shadow:0 0 0 16px rgba(79,195,247,0);} }
@@ -197,10 +230,28 @@
       </div>
       <div id="floating-yield" class="floating-yield">Yield +0%</div>
       <div class="factory-stage">
+        <div id="materials-intake" class="intake">
+          <div class="intake-head">🚚 Materials Intake</div>
+          <div class="stock-tank"><div id="stock-fill" class="stock-fill"></div><div id="crate-layer"></div></div>
+          <div id="stock-meta" class="stock-meta">Stock 0 / Supply 0.00/s</div>
+        </div>
         <div class="belt" id="belt"></div>
-        <div id="station-litho" class="station" style="left:18%"><div class="icon">🔦</div><div class="name">Litho</div></div>
-        <div id="station-etch" class="station" style="left:44%"><div class="icon">⚡</div><div class="name">Etch</div></div>
-        <div id="station-cmp" class="station" style="left:70%"><div class="icon">💿</div><div class="name">CMP</div></div>
+
+        <div id="station-litho" class="station fx-litho" style="left:22%">
+          <div class="top"><div class="icon">🔦</div><div class="name">Litho</div></div>
+          <div class="metrics">Rate: <span id="rate-litho">0.00</span>/s<br>Cap: <span id="cap-litho">0</span> / Q: <span id="q-litho">0</span></div>
+          <div class="flow"><div id="queue-litho" class="slot queue"></div><div id="proc-litho" class="slot proc"></div><div id="out-litho" class="slot out"></div></div>
+        </div>
+        <div id="station-etch" class="station fx-etch" style="left:47%">
+          <div class="top"><div class="icon">⚡</div><div class="name">Etch</div></div>
+          <div class="metrics">Rate: <span id="rate-etch">0.00</span>/s<br>Cap: <span id="cap-etch">0</span> / Q: <span id="q-etch">0</span></div>
+          <div class="flow"><div id="queue-etch" class="slot queue"></div><div id="proc-etch" class="slot proc"></div><div id="out-etch" class="slot out"></div></div>
+        </div>
+        <div id="station-cmp" class="station fx-cmp" style="left:72%">
+          <div class="top"><div class="icon">💿</div><div class="name">CMP</div></div>
+          <div class="metrics">Rate: <span id="rate-cmp">0.00</span>/s<br>Cap: <span id="cap-cmp">0</span> / Q: <span id="q-cmp">0</span></div>
+          <div class="flow"><div id="queue-cmp" class="slot queue"></div><div id="proc-cmp" class="slot proc"></div><div id="out-cmp" class="slot out"></div></div>
+        </div>
       </div>
       <div class="settings">
         <label><input id="toggle-effects" type="checkbox" /> Effects</label>
@@ -265,7 +316,7 @@
         { id: "40nm", label: "40nm", unlockCost: 50000, waferPrice: 250, materialsPerWafer: 1.2, baseYield: 0.72, themeBg: "linear-gradient(180deg,#2a1f33 0%,#111320 100%)", themeAccent: "#b985ff" },
         { id: "7nm", label: "7nm", unlockCost: 2000000, waferPrice: 1400, materialsPerWafer: 1.85, baseYield: 0.52, themeBg: "linear-gradient(180deg,#102834 0%,#0d171f 100%)", themeAccent: "#46ffd8" },
       ],
-      factory: { maxWafers: 12, maxParticles: 20 }
+      factory: { maxWafers: 20, maxParticles: 20, baseCap: 1, capPerLevel: 0.6 }
     };
 
     const ui = {
@@ -278,18 +329,26 @@
       floatingYield: document.getElementById("floating-yield"), factorySweep: document.getElementById("factory-sweep"), belt: document.getElementById("belt"),
       waferBadge: document.getElementById("wafer-badge"),
       station: { litho: document.getElementById("station-litho"), etch: document.getElementById("station-etch"), cmp: document.getElementById("station-cmp") },
+      intake: document.getElementById("materials-intake"), stockFill: document.getElementById("stock-fill"), stockMeta: document.getElementById("stock-meta"), crateLayer: document.getElementById("crate-layer"),
+      queueEl: { litho: document.getElementById("queue-litho"), etch: document.getElementById("queue-etch"), cmp: document.getElementById("queue-cmp") },
+      procEl: { litho: document.getElementById("proc-litho"), etch: document.getElementById("proc-etch"), cmp: document.getElementById("proc-cmp") },
+      outEl: { litho: document.getElementById("out-litho"), etch: document.getElementById("out-etch"), cmp: document.getElementById("out-cmp") },
+      rateEl: { litho: document.getElementById("rate-litho"), etch: document.getElementById("rate-etch"), cmp: document.getElementById("rate-cmp") },
+      capEl: { litho: document.getElementById("cap-litho"), etch: document.getElementById("cap-etch"), cmp: document.getElementById("cap-cmp") },
+      qEl: { litho: document.getElementById("q-litho"), etch: document.getElementById("q-etch"), cmp: document.getElementById("q-cmp") },
       toggleEffects: document.getElementById("toggle-effects"), toggleSfx: document.getElementById("toggle-sfx"),
       btnResetSave: document.getElementById("btn-reset-save"), debugLine: document.getElementById("debug-line"),
     };
 
     const audio = { ctx: null };
-    const factory = { activeWafers: 0, particles: 0, prevYieldRate: 0, lastRates: null };
+    const factory = { activeWafers: 0, particles: 0, prevYieldRate: 0, lastRates: null, prevMaterials: 0, queueVisual: { litho: 0, etch: 0, cmp: 0 } };
     let uiNeedsRender = true;
     let loopStarted = false;
     let lastTickAt = 0;
     let lastError = "none";
 
     const state = loadState();
+    factory.prevMaterials = state.materials;
     document.addEventListener("DOMContentLoaded", initGame, { once: true });
     if (document.readyState !== "loading") initGame();
 
@@ -376,7 +435,7 @@
       setInterval(() => {
         const rates = factory.lastRates || calculateRates();
         if (!state.settings.effectsOn || factory.activeWafers >= CONFIG.factory.maxWafers) return;
-        const speedFactor = clamp(rates.effectiveWafersPerSec / 8, 0.35, 1.4);
+        const speedFactor = clamp((rates.effectiveWafersPerSec / 8) * (rates.isMaterialBottleneck ? 0.7 : 1), 0.25, 1.4);
         const spawnChance = clamp(rates.effectiveWafersPerSec / 10, 0.05, 0.9);
         if (Math.random() > spawnChance) return;
         spawnWafer(speedFactor, rates.isMaterialBottleneck);
@@ -394,7 +453,7 @@
 
       const zones = [[0.24,"litho"],[0.5,"etch"],[0.76,"cmp"]];
       for (const [pct,id] of zones) {
-        setTimeout(() => triggerStationSpark(id), duration * pct * 1000);
+        setTimeout(() => triggerProcessVisual(id), duration * pct * 1000);
       }
 
       wafer.addEventListener("animationend", () => {
@@ -403,12 +462,84 @@
       }, { once: true });
     }
 
-    function triggerStationSpark(processId) {
-      if (!state.settings.effectsOn || factory.particles >= CONFIG.factory.maxParticles) return;
-      factory.particles++;
+    function triggerProcessVisual(processId) {
+      if (!state.settings.effectsOn) return;
       const station = ui.station[processId];
-      station.classList.add("spark");
-      setTimeout(() => { station.classList.remove("spark"); factory.particles = Math.max(0, factory.particles - 1); }, 320);
+      const proc = ui.procEl[processId];
+      proc.classList.add("processing");
+      setTimeout(() => proc.classList.remove("processing"), 260);
+
+      if (processId === "etch" && factory.particles < CONFIG.factory.maxParticles) {
+        factory.particles++;
+        station.classList.add("spark");
+        setTimeout(() => { station.classList.remove("spark"); factory.particles = Math.max(0, factory.particles - 1); }, 320);
+      }
+
+      animateMiniWafer(processId);
+    }
+
+    function animateMiniWafer(processId) {
+      if (document.querySelectorAll('.wafer,.wafer-mini').length >= CONFIG.factory.maxWafers) return;
+      const proc = ui.procEl[processId];
+      const mini = document.createElement('div');
+      mini.className = 'wafer-mini step-in';
+      proc.appendChild(mini);
+      setTimeout(() => {
+        mini.classList.remove('step-in');
+        mini.classList.add('step-out');
+      }, 180);
+      mini.addEventListener('animationend', () => mini.remove(), { once: true });
+    }
+
+    function spawnMaterialCrate(direction) {
+      if (!state.settings.effectsOn) return;
+      const crate = document.createElement('div');
+      crate.className = `crate ${direction}`;
+      ui.crateLayer.appendChild(crate);
+      crate.addEventListener('animationend', () => crate.remove(), { once: true });
+    }
+
+    function visualCapacity(level) {
+      return clamp(Math.round(CONFIG.factory.baseCap + CONFIG.factory.capPerLevel * level), 1, 6);
+    }
+
+    function updateFactoryVisuals(rates) {
+      const stockRatio = clamp(state.materials / 250, 0.05, 1);
+      ui.stockFill.style.height = `${stockRatio * 100}%`;
+      ui.stockMeta.textContent = `Stock ${fmtNum(state.materials,1)} / Supply ${fmtNum(rates.supplyPerSec,2)}/s${rates.isMaterialBottleneck ? " / Material Shortage" : ""}`;
+      ui.intake.classList.toggle('shortage', rates.isMaterialBottleneck);
+
+      const matDelta = state.materials - factory.prevMaterials;
+      if (matDelta > 0.2) spawnMaterialCrate('in');
+      if (rates.materialConsumptionPerSec > 0.05 && matDelta < 0.1) spawnMaterialCrate('out');
+      factory.prevMaterials = state.materials;
+
+      for (const p of CONFIG.processes) {
+        const level = state.processLevels[p.id] || 1;
+        const cap = visualCapacity(level);
+        const target = clamp((1 - rates.utilization) * cap * (rates.isMaterialBottleneck ? 1.25 : 0.7), 0, cap);
+        factory.queueVisual[p.id] += (target - factory.queueVisual[p.id]) * 0.26;
+        const qCount = Math.round(factory.queueVisual[p.id]);
+
+        ui.rateEl[p.id].textContent = fmtNum(rates.processRates.find((x)=>x.id===p.id)?.rate || 0, 2);
+        ui.capEl[p.id].textContent = String(cap);
+        ui.qEl[p.id].textContent = String(qCount);
+
+        ui.queueEl[p.id].innerHTML = '';
+        for (let i = 0; i < qCount; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'queue-dot';
+          ui.queueEl[p.id].appendChild(dot);
+        }
+
+        ui.outEl[p.id].innerHTML = '';
+        const outCount = clamp(Math.round(rates.utilization * cap * 0.5), 0, cap);
+        for (let i = 0; i < outCount; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'out-dot';
+          ui.outEl[p.id].appendChild(dot);
+        }
+      }
     }
 
     function step(sec){ const r = calculateRates(); state.materials = Math.max(0, state.materials + (r.supplyPerSec-r.materialConsumptionPerSec)*sec); state.money += r.revenuePerSec * sec; }
@@ -500,6 +631,7 @@
       }
 
       ui.debugLine.textContent = `tick: ${lastTickAt ? new Date(lastTickAt).toLocaleTimeString() : "-"} / error: ${lastError}`;
+      updateFactoryVisuals(rates);
       renderProcessList(rates);
       renderNodeList();
     }
